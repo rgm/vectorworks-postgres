@@ -1,0 +1,89 @@
+#!/bin/sh
+
+set -e
+
+ROOT="$(pwd)"
+PSQL_VERSION="9.1.3"
+VENDOR_DIR="$ROOT/vendor"
+TMP_DIR="$ROOT/tmp"
+SRC_DIR="$TMP_DIR/postgresql-$PSQL_VERSION"
+PSQL_DIR="$ROOT/db"
+DATA_DIR="$PSQL_DIR/data"
+PSQL_PORT=5555
+PSQL_URL="http://ftp.postgresql.org/pub/source/v${PSQL_VERSION}/postgresql-${PSQL_VERSION}.tar.bz2"
+#IODBC_URL="http://downloads.sourceforge.net/project/iodbc/iodbc/3.52.8/libiodbc-3.52.8.tar.gz"
+ODBC_ADMIN_URL="http://support.apple.com/downloads/DL895/en_US/ODBCAdministrator.dmg"
+IODBC_CONFIG="/usr/bin/iodbc-config"
+PSQL_ODBC_URL="http://ftp.postgresql.org/pub/odbc/versions/src/psqlodbc-09.01.0100.tar.gz"
+
+SHMMAX=$(sysctl kern.sysv.shmall | cut -f 2 -d ' ')
+
+if [ $SHMMAX -lt 65536 ]
+then
+  echo "Shared memory too small; run script/set_shared_memory"
+  exit 1
+fi
+
+if [ ! -d "$TMP_DIR" ]
+then
+  mkdir "$TMP_DIR"
+fi
+
+if [ ! -d "$VENDOR_DIR" ]
+then
+  mkdir "$VENDOR_DIR"
+fi
+
+echo ""
+echo "Downloading source code"
+echo ""
+
+cd vendor
+curl -O "$PSQL_URL"
+curl -O "$PSQL_ODBC_URL"
+#curl -O "$UNIXODBC_URL"
+#curl -O -L "$IODBC_URL"
+curl -O "$ODBC_ADMIN_URL"
+cd ..
+
+#rm -rf "$PSQL_DIR" "$TMP_DIR"
+
+export CFLAGS=-m32  # compile 32 bit, to match system iodbc architecture
+
+echo ""
+echo "Building PostgreSQL $PSQL_VERSION"
+echo ""
+
+tar -x -C "$TMP_DIR" -f "$ROOT/vendor/postgresql-$PSQL_VERSION.tar.bz2"
+cd "$TMP_DIR/postgresql-$PSQL_VERSION"
+./configure --prefix="$PSQL_DIR" --with-pgport=$PSQL_PORT
+make && make install
+
+echo ""
+echo "Initializing Postgres database in db/"
+echo ""
+
+mkdir "$DATA_DIR"
+"$PSQL_DIR/bin/initdb" -D "$DATA_DIR"
+"$PSQL_DIR/bin/createdb $(whoami)"
+
+# echo ""
+# echo "Building iODBC"
+# echo ""
+# 
+# tar -x -C "$TMP_DIR" -f "$ROOT/vendor/libiodbc-3.52.8.tar.gz"
+# cd "$TMP_DIR/libiodbc-3.52.8"
+# ./configure --prefix="$PSQL_DIR"
+# make && make install
+
+echo ""
+echo "Building psqlODBC against system iODBC"
+echo ""
+
+tar -x -C "$TMP_DIR" -f "$ROOT/vendor/pqslodbc-09.01.0100.tar.gz"
+cd "$TMP_DIR/pqslodbc-09.01.0100"
+#./configure --prefix="$PSQL_DIR" --with-iodbc="$PSQL_DIR/bin/iodbc-config"
+./configure --prefix="$PSQL_DIR" --with-iodbc="$IODBC_CONFIG" --with-libpq="$PSQL_DIR/bin"
+make && make install
+
+open "/Applications/Utilities/ODBC Administrator.app"
