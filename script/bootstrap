@@ -34,6 +34,8 @@ then
   mkdir "$VENDOR_DIR"
 fi
 
+set -x
+
 echo ""
 echo "Downloading source code"
 echo ""
@@ -41,14 +43,13 @@ echo ""
 cd vendor
 curl -O "$PSQL_URL"
 curl -O "$PSQL_ODBC_URL"
-#curl -O "$UNIXODBC_URL"
-#curl -O -L "$IODBC_URL"
 curl -O "$ODBC_ADMIN_URL"
 cd ..
 
-#rm -rf "$PSQL_DIR" "$TMP_DIR"
+rm -rf "$PSQL_DIR" "$TMP_DIR"
 
-export CFLAGS=-m32  # compile 32 bit, to match system iodbc architecture
+export CFLAGS=-mi386  # compile 32 bit, to match system iodbc architecture
+#export ARCHFLAGS='-arch i386'
 
 echo ""
 echo "Building PostgreSQL $PSQL_VERSION"
@@ -67,23 +68,13 @@ mkdir "$DATA_DIR"
 "$PSQL_DIR/bin/initdb" -D "$DATA_DIR"
 #"$PSQL_DIR/bin/createdb $(whoami)"
 
-# echo ""
-# echo "Building iODBC"
-# echo ""
-# 
-# tar -x -C "$TMP_DIR" -f "$ROOT/vendor/libiodbc-3.52.8.tar.gz"
-# cd "$TMP_DIR/libiodbc-3.52.8"
-# ./configure --prefix="$PSQL_DIR"
-# make && make install
-
 echo ""
 echo "Building psqlODBC against system iODBC"
 echo ""
 
-tar -x -C "$TMP_DIR" -f "$ROOT/vendor/pqslodbc-09.01.0100.tar.gz"
-cd "$TMP_DIR/pqslodbc-09.01.0100"
-#./configure --prefix="$PSQL_DIR" --with-iodbc="$PSQL_DIR/bin/iodbc-config"
+tar -x -C "$TMP_DIR" -f "$ROOT/vendor/psqlodbc-09.01.0100.tar.gz"
+cd "$TMP_DIR/psqlodbc-09.01.0100"
 ./configure --prefix="$PSQL_DIR" --with-iodbc="$IODBC_CONFIG" --with-libpq="$PSQL_DIR/bin"
 make && make install
 
-open "/Applications/Utilities/ODBC Administrator.app"
+#open "/Applications/Utilities/ODBC Administrator.app"
