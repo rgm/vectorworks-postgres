@@ -24,10 +24,8 @@ then
   exit 1
 fi
 
-if [ ! -d "$TMP_DIR" ]
-then
-  mkdir "$TMP_DIR"
-fi
+rm -rf "$PSQL_DIR" "$TMP_DIR"
+mkdir "$TMP_DIR"
 
 if [ ! -d "$VENDOR_DIR" ]
 then
@@ -46,9 +44,8 @@ curl -O "$PSQL_ODBC_URL"
 curl -O "$ODBC_ADMIN_URL"
 cd ..
 
-rm -rf "$PSQL_DIR" "$TMP_DIR"
 
-export CFLAGS=-mi386  # compile 32 bit, to match system iodbc architecture
+#export CFLAGS=-mi386  # compile 32 bit, to match system iodbc architecture
 #export ARCHFLAGS='-arch i386'
 
 echo ""
