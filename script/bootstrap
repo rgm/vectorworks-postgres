@@ -65,7 +65,7 @@ echo ""
 
 mkdir "$DATA_DIR"
 "$PSQL_DIR/bin/initdb" -D "$DATA_DIR"
-"$PSQL_DIR/bin/createdb $(whoami)"
+#"$PSQL_DIR/bin/createdb $(whoami)"
 
 # echo ""
 # echo "Building iODBC"
