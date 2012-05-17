@@ -3,17 +3,17 @@
 set -e
 
 ROOT="$(pwd)"
-PSQL_VERSION="9.1.3"
 VENDOR_DIR="$ROOT/vendor"
 TMP_DIR="$ROOT/tmp"
 SRC_DIR="$TMP_DIR/postgresql-$PSQL_VERSION"
 PSQL_DIR="$ROOT/db"
 DATA_DIR="$PSQL_DIR/data"
 PSQL_PORT=5555
-PSQL_URL="http://ftp.postgresql.org/pub/source/v${PSQL_VERSION}/postgresql-${PSQL_VERSION}.tar.bz2"
-#IODBC_URL="http://downloads.sourceforge.net/project/iodbc/iodbc/3.52.8/libiodbc-3.52.8.tar.gz"
+
+PSQL_URL="http://ftp.postgresql.org/pub/source/v9.1.3/postgresql-9.1.3.tar.bz2"
+IODBC_URL="http://downloads.sourceforge.net/project/iodbc/iodbc/3.52.8/libiodbc-3.52.8.tar.gz"
 ODBC_ADMIN_URL="http://support.apple.com/downloads/DL895/en_US/ODBCAdministrator.dmg"
-IODBC_CONFIG="/usr/bin/iodbc-config"
+IODBC_CONFIG="$PSQL_DIR/bin/iodbc-config"
 PSQL_ODBC_URL="http://ftp.postgresql.org/pub/odbc/versions/src/psqlodbc-09.01.0100.tar.gz"
 
 SHMMAX=$(sysctl kern.sysv.shmall | cut -f 2 -d ' ')
@@ -39,21 +39,18 @@ echo "Downloading source code"
 echo ""
 
 cd vendor
-curl -O "$PSQL_URL"
-curl -O "$PSQL_ODBC_URL"
-curl -O "$ODBC_ADMIN_URL"
+test -e "$VENDOR_DIR/postgresql-9.1.3.tar.bz2" || curl -O "$PSQL_URL"
+test -e "$VENDOR_DIR/libiodbc-3.52.8.tar.gz" || curl -O "$PSQL_ODBC_URL"
+test -e "$VENDOR_DIR/psqlodbc-09.01.0100.tar.gz" || curl -O -L "$IODBC_SRC_URL"
+test -e "$VENDOR_DIR/ODBCAdministrator.dmg" || curl -O "$ODBC_ADMIN_URL"
 cd ..
 
-
-#export CFLAGS=-mi386  # compile 32 bit, to match system iodbc architecture
-#export ARCHFLAGS='-arch i386'
-
 echo ""
-echo "Building PostgreSQL $PSQL_VERSION"
+echo "Building PostgreSQL"
 echo ""
 
-tar -x -C "$TMP_DIR" -f "$ROOT/vendor/postgresql-$PSQL_VERSION.tar.bz2"
-cd "$TMP_DIR/postgresql-$PSQL_VERSION"
+tar -x -C "$TMP_DIR" -f "$ROOT/vendor/postgresql-9.1.3.tar.bz2"
+cd "$TMP_DIR/postgresql-9.1.3"
 ./configure --prefix="$PSQL_DIR" --with-pgport=$PSQL_PORT
 make && make install
 
@@ -63,10 +60,18 @@ echo ""
 
 mkdir "$DATA_DIR"
 "$PSQL_DIR/bin/initdb" -D "$DATA_DIR"
-#"$PSQL_DIR/bin/createdb $(whoami)"
 
 echo ""
-echo "Building psqlODBC against system iODBC"
+echo "Building iODBC"
+echo ""
+
+tar -x -C "$TMP_DIR" -f "$ROOT/vendor/libiodbc-3.52.8.tar.gz"
+cd "$TMP_DIR/libiodbc-3.52.8.tar.gz"
+./configure --prefix="$PSQL_DIR"
+make && make install
+
+echo ""
+echo "Building psqlODBC against our own iODBC"
 echo ""
 
 tar -x -C "$TMP_DIR" -f "$ROOT/vendor/psqlodbc-09.01.0100.tar.gz"
@@ -74,4 +79,5 @@ cd "$TMP_DIR/psqlodbc-09.01.0100"
 ./configure --prefix="$PSQL_DIR" --with-iodbc="$IODBC_CONFIG" --with-libpq="$PSQL_DIR/bin"
 make && make install
 
+#"$PSQL_DIR/bin/createdb $(whoami)"
 #open "/Applications/Utilities/ODBC Administrator.app"
